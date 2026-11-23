@@ -277,12 +277,24 @@ async function send(raw) {
   busy = new AbortController();
   document.body.classList.add('busy');
 
-  const run = (m) => {
+  const signal = busy.signal;
+  const once = (m) => {
     reply.model = m;
     return streamChat({
-      key: settings.apiKey, model: m, system: settings.system, messages: history, signal: busy.signal,
+      key: settings.apiKey, model: m, system: settings.system, messages: history, signal,
       onDelta: (t) => { reply.text = t; scheduleRender(); },
     });
+  };
+  // Túlterhelésnél (503/500) egyszer újrapróbálja ugyanazt a modellt.
+  const run = async (m) => {
+    try {
+      return await once(m);
+    } catch (e) {
+      if (![500, 503].includes(e.status) || reply.text || signal.aborted) throw e;
+      await new Promise((r) => setTimeout(r, 1500));
+      if (signal.aborted) throw e;
+      return once(m);
+    }
   };
 
   try {
@@ -291,7 +303,7 @@ async function send(raw) {
     } catch (e) {
       const fallback = settings.fastModel;
       const canFallBack = tier === 'strong' && fallback && fallback !== model && !reply.text
-        && e.name !== 'AbortError' && [403, 404, 429].includes(e.status);
+        && e.name !== 'AbortError' && [403, 404, 429, 500, 503, 504].includes(e.status);
       if (!canFallBack) throw e;
       reply.note = 'Az erős modell most nem érhető el, a gyors modell válaszolt.';
       reply.tier = 'fast';
@@ -316,6 +328,8 @@ function explain(e) {
   if (e.status === 429) return 'Elérted a percenkénti vagy napi keretet. Várj egy kicsit, vagy válts a Gyors módra.';
   if (e.status === 403) return 'A kulcs nem fér hozzá ehhez a modellhez.';
   if (e.status === 404) return 'A modell nem található. Töltsd be újra a modelleket a beállításokban.';
+  if (e.status === 503 || e.status === 500) return 'A modell most túlterhelt. Próbáld újra kicsit később, vagy válts a Gyors módra.';
+  if (e.status === 504) return msg + ' Próbáld újra, vagy válts a Gyors módra.';
   return msg;
 }
 
