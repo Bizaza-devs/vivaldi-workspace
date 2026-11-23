@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gemini</title>
+<link rel="stylesheet" href="panel.css">
+</head>
+<body>
+<header class="bar">
+  <div class="title"><span class="logo" aria-hidden="true"></span>Gemini</div>
+  <select id="route" class="pill" title="Modellválasztás" aria-label="Modellválasztás">
+    <option value="auto">Auto</option>
+    <option value="fast">Gyors</option>
+    <option value="strong">Erős</option>
+  </select>
+  <button id="newChat" class="icon" title="Új beszélgetés" aria-label="Új beszélgetés">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+  </button>
+  <button id="openSettings" class="icon" title="Beállítások" aria-label="Beállítások">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+  </button>
+</header>
+
+<main id="chat">
+  <div id="messages" aria-live="polite"></div>
+  <section id="empty" class="empty">
+    <div class="orb" aria-hidden="true"></div>
+    <h1>Miben segíthetek?</h1>
+    <div class="chips">
+      <button data-page="1" data-prompt="Foglald össze ezt az oldalt röviden, pontokba szedve.">Oldal összefoglalása</button>
+      <button data-page="1" data-prompt="Mik a legfontosabb tudnivalók ezen az oldalon?">Kulcspontok az oldalról</button>
+      <button data-prompt="Írj 3 rövid, ütős Instagram-caption ötletet egy streetwear dropra.">Caption-ötletek</button>
+    </div>
+  </section>
+</main>
+
+<footer class="composer">
+  <div id="ctx" class="ctx" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/></svg>
+    <span class="ctx-label"></span>
+    <button class="ctx-x" title="Eltávolítás" aria-label="Kontextus eltávolítása">×</button>
+  </div>
+  <div class="box">
+    <button id="attach" class="icon" title="Az aktuális oldal csatolása" aria-label="Oldal csatolása">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
+    </button>
+    <textarea id="input" rows="1" placeholder="Kérdezz bármit…" aria-label="Üzenet"></textarea>
+    <button id="send" class="send" title="Küldés (Enter)" aria-label="Küldés">
+      <svg class="i-send" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+      <svg class="i-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+    </button>
+  </div>
+  <p id="privacy" class="hint" hidden>Ingyenes kulcs: a Google felhasználhatja, amit elküldesz. Érzékeny oldalt ne csatolj.</p>
+</footer>
+
+<section id="settings" class="sheet" hidden aria-label="Beállítások">
+  <header class="bar">
+    <div class="title">Beállítások</div>
+    <button id="closeSettings" class="done">Kész</button>
+  </header>
+  <div class="form">
+    <div class="group">
+      <label class="label" for="apiKey">Gemini API-kulcs</label>
+      <div class="row">
+        <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…">
+        <button id="toggleKey" class="ghost" type="button">Mutat</button>
+      </div>
+      <p class="help">Kulcs létrehozása: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a>. Csak ezen a gépen, a böngésző helyi tárában marad.</p>
+    </div>
+    <button id="loadModels" class="primary" type="button">Kulcs ellenőrzése és modellek betöltése</button>
+    <p id="modelStatus" class="help"></p>
+
+    <div class="group">
+      <label class="label" for="fastModel">Gyors modell – rövid kérdések</label>
+      <select id="fastModel"></select>
+    </div>
+    <div class="group">
+      <label class="label" for="strongModel">Erős modell – munka, elemzés, kód</label>
+      <select id="strongModel"></select>
+    </div>
+    <div class="group">
+      <label class="label" for="openMode">Megnyitás az ikonról / Alt+G</label>
+      <select id="openMode">
+        <option value="window">Külön kis ablak (Vivaldi-ban biztosan működik)</option>
+        <option value="sidepanel">Oldalpanel (Chrome-szerű)</option>
+      </select>
+    </div>
+    <label class="check"><input id="freeTier" type="checkbox"><span>Ingyenes kulcsot használok – figyelmeztetés, és az erős modell is Flash</span></label>
+    <div class="group">
+      <label class="label" for="system">Alaputasítás</label>
+      <textarea id="system" rows="4"></textarea>
+    </div>
+    <button id="clearChat" class="danger" type="button">Beszélgetés törlése</button>
+    <p class="help">Vivaldi-webpanel címe: <code id="panelUrl">–</code></p>
+  </div>
+</section>
+
+<div id="toast" class="toast" role="status" hidden></div>
+<script type="module" src="panel.js"></script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+/*
+  macOS-szerű, letisztult Vivaldi-felület.
+  Bekapcsolás: vivaldi://experiments → „Allow for using CSS modifications”,
+  majd Beállítások → Megjelenés → Custom UI Modifications → ezt a mappát válaszd ki, és indítsd újra a Vivaldit.
+
+  A Vivaldi belső osztálynevei verzióról verzióra változhatnak. Ha egy rész nem hat,
+  az csak annyit jelent, hogy az a szelektor már nem létezik: kárt nem okoz.
+  Minden blokk külön kikapcsolható (töröld vagy tedd megjegyzésbe).
+*/
+
+/* 1. Rendszerbetű, ahogy macOS-en (Windowson a Segoe UI Variable a legközelebbi) */
+#browser {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif !important;
+}
+
+/* 2. Lebegő, lekerekített weboldal-kártya finom árnyékkal */
+#webview-container {
+  padding: 0 8px 8px 0;
+}
+#webview-container .webpageview,
+#webview-container webview {
+  border-radius: 10px;
+  overflow: hidden;
+}
+#webview-container .webpageview {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 6px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* 3. Kapszula alakú címsor, középre igazított, nyugodt kinézet */
+.UrlBar-AddressField {
+  border-radius: 999px !important;
+  border-color: transparent !important;
+  background-color: color-mix(in srgb, var(--colorFg, #000) 6%, transparent) !important;
+}
+.UrlBar-AddressField:focus-within {
+  background-color: var(--colorBg, #fff) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--colorHighlightBg, #0a84ff) 35%, transparent) !important;
+}
+
+/* 4. Lekerekített fülek, az aktív fül „kártyaként” emelkedik ki */
+.tab-position .tab {
+  border-radius: 8px !important;
+}
+.tab-position .tab.active {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* 5. Oldalsáv (webpanel-ikonok): több levegő, kerek kijelölés, mint a macOS Dockban */
+#switch {
+  padding-top: 6px;
+  gap: 4px;
+}
+#switch button {
+  border-radius: 10px !important;
+  margin: 0 6px;
+}
+#switch button img,
+#switch button svg {
+  transition: transform 0.15s ease;
+}
+#switch button:hover img,
+#switch button:hover svg {
+  transform: scale(1.08);
+}
+
+/* 6. A panel (pl. Gemini) is lekerekített kártya */
+#panels-container .panel-group {
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 0 0 8px 8px;
+}
+
+/* 7. Csendesebb kezelőelemek: vékonyabb elválasztók */
+.toolbar-mainbar,
+#tabs-tabbar-container {
+  border-bottom: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #switch button img,
+  #switch button svg { transition: none; }
+}
