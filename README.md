@@ -47,6 +47,18 @@ Előnézet bővítmény nélkül (csak a kinézet, API-hívás nélkül):
 python -m http.server 5174 --directory extension
 ```
 
+## Vivaldi-beállítások fájlból
+
+`setup/apply_vivaldi_settings.py` – a Vivaldi saját `prefs_definitions.json`-ja alapján írja a profilt (csak bezárt Vivaldinál fut, előtte mentést készít):
+harmadik féltől származó sütik tiltása, csak HTTPS, WebRTC IP-védelem, keresési javaslatok és előtöltés ki, Quad9 DoH, blokkolás a legerősebb szinten,
+két macOS-téma (a Windows világos/sötét módját követi), CSS-mod mappa, webpanelek. A Chromium védett kulcsaihoz (bővítmények, kereső, kezdőlap) nem nyúl.
+
+```powershell
+python setup/apply_vivaldi_settings.py
+```
+
+A Gemini Panel webpanelként nem marad meg a Vivaldi 8.3-ban; Alt+G-vel vagy az ikonjával nyílik.
+
 ## Vivaldi CSS
 
 `vivaldi://experiments` → *Allow for using CSS modifications* → Beállítások → Megjelenés → *Custom UI Modifications* → a `vivaldi-mods` mappa → Vivaldi újraindítása.
