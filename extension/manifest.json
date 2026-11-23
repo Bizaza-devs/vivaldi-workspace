@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "Gemini Panel",
   "version": "0.1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0KrJ9sKAVZ9bE9Wf1K/EswHPaH6eZ6PTJvVF8f71TOG8Xfpsu+PNzuoIytMhqKxQ5ZVhHI2IBUrB7BJA4aH7u1/3H7XoCXeaLiw5AcBvCyo/0IM/Dw7dvZ9BI55axlSRNSJJjKkMd+p5NxzHWFEen7eotn9Q+vAq3Rha3jmekiNxK2rhvzq2OGPiKxbeBLadc/sLKmMpSRrRTnP0G1ag74+bqFLbI3JyDTKbvI2kxnnxWgzua9hHJ6eZzv4Z9/F3PxQttEdCJlppfV+rEkmZJZ9h79CIs/PsQJGPw3FxjPiAK3kdNwgrknZA3ic6nLHplJNZN1ljjhDWDtkOhNOGBQIDAQAB",
   "description": "Letisztult Gemini-chat a böngésző mellett: oldal és kijelölés kérdezése, automatikus modellválasztás.",
   "icons": {
     "16": "icons/icon16.png",
