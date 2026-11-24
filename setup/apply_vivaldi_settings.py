@@ -1,14 +1,14 @@
-"""Vivaldi-profil beállítása fájlból: Brave-szerű privacy, macOS-téma, CSS-mod, webpanelek.
+"""Configure a Vivaldi profile from a file: Brave-style privacy, macOS theme, CSS mods, web panels.
 
-Használat (a Vivaldi legyen BEZÁRVA):
+Usage (Vivaldi must be CLOSED):
     python setup/apply_vivaldi_settings.py
 
-Mit csinál:
-- mentést készít a módosított fájlokról (User Data/_beallitas_mentes/<időbélyeg>/),
-- csak a NEM védett beállításokat írja. A Chromium által védett kulcsokhoz
-  (bővítmények, fejlesztői mód, alapértelmezett kereső, kezdőlap) nem nyúl,
-  mert azokat a böngésző visszaállítaná.
-A kulcsnevek a telepített Vivaldi saját prefs_definitions.json-jából valók (8.3).
+What it does:
+- backs up the files it changes (User Data/_settings_backup/<timestamp>/),
+- writes only NON-protected settings. It does not touch keys that Chromium protects
+  (extensions, developer mode, default search engine, start page),
+  because the browser would reset them.
+Key names come from the installed Vivaldi's own prefs_definitions.json (8.3).
 """
 import copy
 import json
@@ -25,7 +25,7 @@ USER_DATA = LOCAL / "User Data"
 PROFILE = USER_DATA / "Default"
 REPO = Path(__file__).resolve().parent.parent
 MODS_DIR = REPO / "vivaldi-mods"
-EXTENSION_ID = "cnolniedinhhiafipejmfigkbidglnea"  # a manifest.json "key" mezőjéből
+EXTENSION_ID = "cnolniedinhhiafipejmfigkbidglnea"  # derived from the "key" field in manifest.json
 
 WEB_PANELS = [
     ("Gemini Panel", f"chrome-extension://{EXTENSION_ID}/panel.html", False),
@@ -36,11 +36,11 @@ WEB_PANELS = [
     ("Klaviyo", "https://www.klaviyo.com/dashboard", True),
 ]
 
-# macOS-szerű színek (világos / sötét), kék kiemeléssel
+# macOS-style colours (light / dark) with a blue accent
 THEMES = {
-    "macos-light": dict(base="Vivaldi1", name="macOS világos", colorBg="#f5f5f7", colorFg="#1d1d1f",
+    "macos-light": dict(base="Vivaldi1", name="macOS light", colorBg="#f5f5f7", colorFg="#1d1d1f",
                         colorAccentBg="#e5e5ea", colorHighlightBg="#0a84ff", colorWindowBg="#ececee"),
-    "macos-dark": dict(base="Vivaldi2", name="macOS sötét", colorBg="#2c2c2e", colorFg="#f5f5f7",
+    "macos-dark": dict(base="Vivaldi2", name="macOS dark", colorBg="#2c2c2e", colorFg="#f5f5f7",
                        colorAccentBg="#3a3a3c", colorHighlightBg="#0a84ff", colorWindowBg="#1c1c1e"),
 }
 
@@ -72,11 +72,11 @@ def defaults():
 
 def main():
     if vivaldi_running():
-        sys.exit("A Vivaldi fut. Zárd be (a tálcáról is), aztán futtasd újra.")
+        sys.exit("Vivaldi is running. Close it (including the tray icon), then run this again.")
     if not (PROFILE / "Preferences").exists():
-        sys.exit("Nincs még Vivaldi-profil: indítsd el egyszer a Vivaldit, zárd be, és futtasd újra.")
+        sys.exit("No Vivaldi profile yet: start Vivaldi once, close it, and run this again.")
 
-    backup = USER_DATA / "_beallitas_mentes" / datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup = USER_DATA / "_settings_backup" / datetime.now().strftime("%Y%m%d-%H%M%S")
     backup.mkdir(parents=True)
     for p in (USER_DATA / "Local State", PROFILE / "Preferences", PROFILE / "AdBlockState"):
         if p.exists():
@@ -85,21 +85,21 @@ def main():
     defs = defaults()
     prefs = load(PROFILE / "Preferences")
 
-    # --- Privacy (Brave-szerűen) ---
-    put(prefs, "profile.cookie_controls_mode", 1)                 # harmadik féltől származó sütik tiltása
-    put(prefs, "https_only_mode_enabled", True)                   # mindig HTTPS
-    put(prefs, "webrtc.ip_handling_policy", "default_public_interface_only")  # helyi IP nem szivárog
-    put(prefs, "search.suggest_enabled", False)                   # gépelés nem megy a keresőhöz
-    put(prefs, "net.network_prediction_options", 2)               # nincs előtöltés
-    put(prefs, "enable_do_not_track", False)                      # semmit nem véd, csak ujjlenyomat
-    put(prefs, "enable_a_ping", False)                            # hyperlink-auditálás ki
+    # --- Privacy (Brave-style) ---
+    put(prefs, "profile.cookie_controls_mode", 1)                 # block third-party cookies
+    put(prefs, "https_only_mode_enabled", True)                   # always HTTPS
+    put(prefs, "webrtc.ip_handling_policy", "default_public_interface_only")  # do not leak the local IP
+    put(prefs, "search.suggest_enabled", False)                   # typing is not sent to the search engine
+    put(prefs, "net.network_prediction_options", 2)               # no preloading
+    put(prefs, "enable_do_not_track", False)                      # protects nothing, only adds fingerprinting surface
+    put(prefs, "enable_a_ping", False)                            # hyperlink auditing off
     put(prefs, "vivaldi.privacy.block_pings.enabled", True)
-    put(prefs, "vivaldi.privacy.autofill.server_assist", False)   # űrlapadat nem megy szerverre
+    put(prefs, "vivaldi.privacy.autofill.server_assist", False)   # form data is not sent to a server
     put(prefs, "vivaldi.address_bar.search.suggest_enabled", False)
     put(prefs, "vivaldi.address_bar.inline_search.suggest_enabled", False)
-    # A Google adathalász- és kártevővédelme (safebrowsing) szándékosan BE marad.
+    # Google's phishing and malware protection (Safe Browsing) intentionally stays ON.
 
-    # --- Megjelenés ---
+    # --- Appearance ---
     put(prefs, "vivaldi.appearance.css_ui_mods_directory", str(MODS_DIR))
     put(prefs, "vivaldi.status_bar.display", "off")
     system_themes = {t["id"]: t for t in defs["vivaldi"]["themes"]["system"]["default"]}
@@ -110,11 +110,11 @@ def main():
         t.update(id=tid, accentFromPage=False, accentOnWindow=False, preferSystemAccent=False, radius=10)
         user_themes.append(t)
     put(prefs, "vivaldi.themes.user", user_themes)
-    put(prefs, "vivaldi.theme.schedule.enabled", "system")        # a Windows világos/sötét módját követi
+    put(prefs, "vivaldi.theme.schedule.enabled", "system")        # follows Windows light/dark mode
     put(prefs, "vivaldi.theme.schedule.o_s", {"light": "macos-light", "dark": "macos-dark"})
     put(prefs, "vivaldi.themes.current", "macos-light")
 
-    # --- Oldalsáv: csak a saját webpanelek ---
+    # --- Side bar: only our own web panels ---
     web = defs["vivaldi"]["panels"]["web"]
     old_elements = prefs.get("vivaldi", {}).get("panels", {}).get("web", {}).get("elements", web["elements"]["default"])
     keep = {e["url"]: e for e in old_elements}
@@ -133,26 +133,26 @@ def main():
     put(prefs, "vivaldi.toolbars.panel",
         ["PanelBookmarks", "PanelDownloads", "PanelHistory", "Divider", *panel_ids, "PanelWeb", "FlexibleSpacer"])
 
-    # --- Első indítás: az üdvözlő varázsló már ne jöjjön ---
+    # --- First run: skip the welcome wizard ---
     put(prefs, "vivaldi.startup.has_seen_welcome_page", True)
     save(PROFILE / "Preferences", prefs)
 
-    # --- Biztonságos DNS (Quad9) ---
+    # --- Secure DNS (Quad9) ---
     state = load(USER_DATA / "Local State")
     put(state, "dns_over_https.mode", "secure")
     put(state, "dns_over_https.templates", "https://dns.quad9.net/dns-query")
     save(USER_DATA / "Local State", state)
 
-    # --- Tracker- és hirdetésblokkolás: a legerősebb szint ---
-    # ad-blocking-3: EasyList + EasyPrivacy + Peter Lowe + sütibanner-szűrő + magyar HUfilter
+    # --- Tracker and ad blocking: strongest level ---
+    # ad-blocking-3: EasyList + EasyPrivacy + Peter Lowe + cookie banner filter + HUfilter (Hungarian list)
     ab_path = PROFILE / "AdBlockState"
     if ab_path.exists():
         ab = load(ab_path)
         ab.setdefault("ad-blocking", {})["global-blocking-category"] = "ad-blocking-3"
         ab_path.write_text(json.dumps(ab, ensure_ascii=False, indent=3), encoding="utf-8")
 
-    print("Kész. Mentés:", backup)
-    print("Webpanelek:", ", ".join(t for t, _, _ in WEB_PANELS))
+    print("Done. Backup:", backup)
+    print("Web panels:", ", ".join(t for t, _, _ in WEB_PANELS))
 
 
 if __name__ == "__main__":

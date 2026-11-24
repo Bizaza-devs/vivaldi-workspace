@@ -1,5 +1,5 @@
-// Kicsi, biztonságos Markdown-megjelenítő: előbb mindent escape-el, utána formáz.
-// Tud: kódblokk, inline kód, címsor, lista, idézet, táblázat, félkövér, dőlt, http(s)-link, vonal.
+// Small, safe Markdown renderer: escapes everything first, then formats.
+// Supports: code blocks, inline code, headings, lists, quotes, tables, bold, italic, http(s) links, rules.
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 function inline(s) {

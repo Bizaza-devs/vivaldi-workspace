@@ -1,4 +1,4 @@
-// Gemini API (Google AI Studio kulcs). A kulcs fejlécben megy, nem az URL-ben.
+// Gemini API (Google AI Studio key). The key is sent in a header, not in the URL.
 const BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 export class GeminiError extends Error {
@@ -14,11 +14,11 @@ async function fail(res) {
   try {
     const j = await res.json();
     if (j && j.error && j.error.message) msg = j.error.message;
-  } catch { /* nem JSON */ }
+  } catch { /* not JSON */ }
   throw new GeminiError(msg, res.status);
 }
 
-// A kulcshoz elérhető szöveges Gemini-modellek.
+// Text Gemini models available for the key.
 export async function listModels(key) {
   const out = [];
   let pageToken = '';
@@ -45,9 +45,9 @@ const version = (id) => {
 };
 const unstable = (id) => (/preview|exp/i.test(id) ? 1 : 0);
 
-// Javasolt pár: gyors = Flash-Lite, erős = Flash (ingyenes szinten) vagy Pro (fizetős szinten).
-// Elsőként a Google által karbantartott „-latest” álneveket választja (ezeket a hivatalos
-// példák is használják, és mindig az aktuális stabil modellre mutatnak).
+// Suggested pair: fast = Flash-Lite, strong = Flash (free tier) or Pro (paid tier).
+// Prefers Google's maintained "-latest" aliases first (the official examples use them
+// too, and they always point to the current stable model).
 export function suggestModels(models, freeTier) {
   const has = (id) => models.some((m) => m.id === id);
   const latestFast = has('gemini-flash-lite-latest') ? 'gemini-flash-lite-latest' : '';
@@ -59,7 +59,7 @@ export function suggestModels(models, freeTier) {
 }
 
 function pickByVersion(models, freeTier) {
-  // stabil előbb, azon belül a legújabb verzió; preview csak ha nincs stabil
+  // stable first, newest version within that; preview only if no stable exists
   const sorted = [...models].sort((a, b) =>
     (unstable(a.id) - unstable(b.id)) || (version(b.id) - version(a.id)) || (a.id.length - b.id.length));
   const lite = sorted.find((m) => /flash-lite/i.test(m.id));
@@ -70,10 +70,10 @@ function pickByVersion(models, freeTier) {
   return { fast: fast ? fast.id : '', strong: strong ? strong.id : '' };
 }
 
-// Ha ennyi ideig nem jön adat, a kérés megszakad (504), és a panel a gyors modellre vált.
+// If no data arrives for this long, the request aborts (504) and the panel falls back to the fast model.
 const IDLE_MS = 60000;
 
-// Streamelt válasz (SSE). onDelta a teljes eddigi szöveget kapja.
+// Streamed reply (SSE). onDelta receives the full text so far.
 export async function streamChat({ key, model, system, messages, signal, onDelta, idleMs = IDLE_MS }) {
   const body = {
     contents: messages.map((m) => ({ role: m.role === 'model' ? 'model' : 'user', parts: [{ text: m.text }] })),
@@ -97,7 +97,7 @@ export async function streamChat({ key, model, system, messages, signal, onDelta
     arm();
     return await readStream();
   } catch (e) {
-    if (timedOut) throw new GeminiError(`A modell ${Math.round(idleMs / 1000)} másodpercig nem válaszolt.`, 504);
+    if (timedOut) throw new GeminiError(`The model did not respond for ${Math.round(idleMs / 1000)} seconds.`, 504);
     throw e;
   } finally {
     clearTimeout(timer);
@@ -130,7 +130,7 @@ export async function streamChat({ key, model, system, messages, signal, onDelta
         if (!line.startsWith('data:')) continue;
         let j;
         try { j = JSON.parse(line.slice(5)); } catch { continue; }
-        if (j.error) throw new GeminiError(j.error.message || 'Ismeretlen hiba', j.error.code);
+        if (j.error) throw new GeminiError(j.error.message || 'Unknown error', j.error.code);
         if (j.promptFeedback && j.promptFeedback.blockReason) blocked = j.promptFeedback.blockReason;
         const parts = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
         const text = parts.filter((p) => !p.thought && typeof p.text === 'string').map((p) => p.text).join('');
@@ -140,7 +140,7 @@ export async function streamChat({ key, model, system, messages, signal, onDelta
         }
       }
     }
-    if (!full && blocked) throw new GeminiError(`A Gemini letiltotta a kérést (${blocked}).`, 400);
+    if (!full && blocked) throw new GeminiError(`Gemini blocked the request (${blocked}).`, 400);
     return full;
   }
 }

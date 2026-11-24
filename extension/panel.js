@@ -14,18 +14,18 @@ const DEFAULTS = {
   route: 'auto',
   openMode: 'window',
   freeTier: true,
-  system: 'Magyarul válaszolj, tömören és pontosan. Ha valamit nem tudsz, mondd ki, ne találj ki adatot. Formázáshoz Markdownt használj.',
+  system: 'Reply in the language the user writes in, concisely and accurately. If you do not know something, say so; never make up data. Use Markdown for formatting.',
 };
-const MAX_SAVED = 60;      // ennyi üzenet marad meg
-const MAX_HISTORY = 20;    // ennyi megy vissza a modellnek kontextusként
+const MAX_SAVED = 60;      // messages kept in storage
+const MAX_HISTORY = 20;    // messages sent back to the model as context
 
-// Auto módban ezekre a szavakra (vagy hosszú üzenetre) az erős modell felel.
-const STRONG_HINT = /(kód|code|program|függvény|script|debug|hib[aá]|elemez|elemzés|stratégi|terv|részletes|összehasonlít|érvel|matek|számol|bizonyít|fogalmazz|írj (egy|nekem)|esszé|levelet|e-mailt|táblázat)/i;
+// In Auto mode the strong model answers these keywords (English and Hungarian) or long messages.
+const STRONG_HINT = /(code|program|function|script|debug|bug|error|analy[sz]|strateg|plan|detailed|compare|argue|math|calculat|prove|essay|letter|email|table|write (a|me)|kód|függvény|hib[aá]|elemz|stratégi|terv|részletes|összehasonlít|matek|számol|bizonyít|fogalmazz|írj (egy|nekem)|esszé|levelet|e-mailt|táblázat)/i;
 
 let settings = { ...DEFAULTS };
 let chat = [];       // { role: 'user'|'model', text, send?, ctx?, tier?, model?, note?, error?, pending? }
-let ctx = null;      // csatolt kontextus: { kind: 'page'|'selection', title, url, text }
-let busy = null;     // AbortController, amíg válasz érkezik
+let ctx = null;      // attached context: { kind: 'page'|'selection', title, url, text }
+let busy = null;     // AbortController while a reply is streaming
 
 const el = {
   messages: $('#messages'), empty: $('#empty'), chat: $('#chat'), input: $('#input'), send: $('#send'),
@@ -52,7 +52,7 @@ async function init() {
   if (p.pending) takePending(p.pending);
 }
 
-/* ---------- Felület ---------- */
+/* ---------- UI ---------- */
 
 function bindUI() {
   el.input.addEventListener('input', autosize);
@@ -75,13 +75,13 @@ function bindUI() {
     });
   }
 
-  // Beállítások
+  // Settings
   const key = $('#apiKey');
   key.addEventListener('change', () => saveSettings({ apiKey: key.value.trim() }));
   $('#toggleKey').addEventListener('click', (e) => {
     const show = key.type === 'password';
     key.type = show ? 'text' : 'password';
-    e.currentTarget.textContent = show ? 'Elrejt' : 'Mutat';
+    e.currentTarget.textContent = show ? 'Hide' : 'Show';
   });
   $('#loadModels').addEventListener('click', loadModels);
   $('#fastModel').addEventListener('change', (e) => saveSettings({ fastModel: e.target.value }));
@@ -89,16 +89,16 @@ function bindUI() {
   $('#openMode').addEventListener('change', (e) => saveSettings({ openMode: e.target.value }));
   $('#freeTier').addEventListener('change', (e) => { saveSettings({ freeTier: e.target.checked }); syncSettingsUI(); });
   $('#system').addEventListener('change', (e) => saveSettings({ system: e.target.value.trim() || DEFAULTS.system }));
-  $('#clearChat').addEventListener('click', () => { newChat(); showSettings(false); toast('A beszélgetés törölve.'); });
+  $('#clearChat').addEventListener('click', () => { newChat(); showSettings(false); toast('Chat cleared.'); });
 
-  // Kódblokk és üzenet másolása (eseménydelegálással, mert a tartalom újrarajzolódik)
+  // Copy code blocks and messages (event delegation, because the content re-renders)
   el.messages.addEventListener('click', (e) => {
     const t = e.target.closest('[data-copy]');
     if (!t) return;
     const text = t.dataset.copy === 'code'
       ? t.closest('pre').querySelector('code').innerText
       : (chat[Number(t.dataset.copy)] || {}).text || '';
-    navigator.clipboard.writeText(text).then(() => toast('Kimásolva.'), () => toast('Nem sikerült másolni.'));
+    navigator.clipboard.writeText(text).then(() => toast('Copied.'), () => toast('Could not copy.'));
   });
 }
 
@@ -119,7 +119,7 @@ function syncSettingsUI() {
   $('#openMode').value = settings.openMode;
   $('#freeTier').checked = settings.freeTier;
   $('#system').value = settings.system;
-  $('#panelUrl').textContent = isExt ? chrome.runtime.getURL('panel.html') : '(csak bővítményként)';
+  $('#panelUrl').textContent = isExt ? chrome.runtime.getURL('panel.html') : '(extension only)';
   el.privacy.hidden = !settings.freeTier;
   fillModelSelect($('#fastModel'), settings.fastModel);
   fillModelSelect($('#strongModel'), settings.strongModel);
@@ -128,7 +128,7 @@ function syncSettingsUI() {
 function fillModelSelect(select, value) {
   const list = settings.models.length ? settings.models : (value ? [{ id: value, label: value }] : []);
   select.innerHTML = '';
-  if (!list.length) select.append(new Option('– előbb töltsd be a modelleket –', ''));
+  if (!list.length) select.append(new Option('– load the models first –', ''));
   for (const m of list) select.append(new Option(m.label === m.id ? m.id : `${m.label} (${m.id})`, m.id));
   select.value = value || '';
 }
@@ -142,12 +142,12 @@ async function loadModels() {
   const btn = $('#loadModels');
   const status = $('#modelStatus');
   const key = $('#apiKey').value.trim();
-  if (!key) { status.textContent = 'Írd be a kulcsot.'; return; }
+  if (!key) { status.textContent = 'Enter the key.'; return; }
   btn.disabled = true;
-  status.textContent = 'Ellenőrzés…';
+  status.textContent = 'Checking…';
   try {
     const models = await listModels(key);
-    if (!models.length) throw new Error('A kulcshoz nem tartozik szöveges Gemini-modell.');
+    if (!models.length) throw new Error('No text Gemini models are available for this key.');
     const pick = suggestModels(models, settings.freeTier);
     const keep = (id) => models.some((m) => m.id === id);
     await saveSettings({
@@ -157,9 +157,9 @@ async function loadModels() {
       strongModel: keep(settings.strongModel) ? settings.strongModel : pick.strong,
     });
     syncSettingsUI();
-    status.textContent = `Rendben: ${models.length} modell elérhető.`;
+    status.textContent = `OK: ${models.length} models available.`;
   } catch (e) {
-    status.textContent = 'Hiba: ' + explain(e);
+    status.textContent = 'Error: ' + explain(e);
   } finally {
     btn.disabled = false;
   }
@@ -176,25 +176,25 @@ function setCtx(c) {
   ctx = c;
   el.ctx.hidden = !c;
   if (c) {
-    const what = c.kind === 'selection' ? 'Kijelölés' : 'Oldal';
+    const what = c.kind === 'selection' ? 'Selection' : 'Page';
     el.ctxLabel.textContent = `${what}: ${c.title || c.url || ''}`;
     el.ctxLabel.title = c.url || '';
   }
 }
 
-/* ---------- Kontextus ---------- */
+/* ---------- Context ---------- */
 
 async function attachPage() {
-  if (!isExt) { toast('Ez csak bővítményként működik.'); return null; }
-  // Egyszeri engedély minden oldalra: az oldalt csak erre a gombnyomásra olvassa be.
-  try { await chrome.permissions.request({ origins: ['<all_urls>'] }); } catch { /* activeTab-bal még mehet */ }
+  if (!isExt) { toast('This only works as an extension.'); return null; }
+  // One-time permission for all sites: the page is read only when this button is pressed.
+  try { await chrome.permissions.request({ origins: ['<all_urls>'] }); } catch { /* may still work with activeTab */ }
   try {
     const win = await chrome.windows.getLastFocused({ windowTypes: ['normal'] });
     const [tab] = await chrome.tabs.query({ active: true, windowId: win.id });
-    if (!tab) throw new Error('nincs aktív fül');
+    if (!tab) throw new Error('no active tab');
     const [r] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractPage });
     const d = r && r.result;
-    if (!d || !d.text) throw new Error('üres oldal');
+    if (!d || !d.text) throw new Error('empty page');
     const c = d.selection
       ? { kind: 'selection', title: d.title, url: d.url, text: d.selection }
       : { kind: 'page', title: d.title, url: d.url, text: d.text };
@@ -202,7 +202,7 @@ async function attachPage() {
     el.input.focus();
     return c;
   } catch {
-    toast('Ezt az oldalt nem tudom beolvasni (belső vagy védett oldal).');
+    toast('Cannot read this page (internal or protected page).');
     return null;
   }
 }
@@ -215,14 +215,14 @@ async function takePending(p) {
   setCtx({ kind: p.kind, title: p.title, url: p.url, text: p.text });
   if (p.prompt) send(p.prompt);
   else {
-    el.input.value = 'Magyarázd el ezt röviden.';
+    el.input.value = 'Explain this briefly.';
     autosize();
     el.input.focus();
     el.input.select();
   }
 }
 
-/* ---------- Küldés ---------- */
+/* ---------- Send ---------- */
 
 function pickTier(text) {
   if (settings.route === 'fast' || settings.route === 'strong') return settings.route;
@@ -238,11 +238,11 @@ function modelFor(tier) {
 
 function buildPayload(text, c) {
   if (!c) return text;
-  const head = c.kind === 'selection' ? 'Kijelölt szöveg' : 'Az oldal tartalma';
+  const head = c.kind === 'selection' ? 'Selected text' : 'Page content';
   return `${text}\n\n---\n${head}${c.title ? ` – ${c.title}` : ''}${c.url ? `\n${c.url}` : ''}\n\n${c.text}`;
 }
 
-// A modellnek felváltva kell user/model üzenet: a hibás válaszokat kihagyja, az egymás utániakat összevonja.
+// The model needs alternating user/model turns: skip failed replies and merge consecutive ones.
 function buildHistory(upto) {
   const out = [];
   for (const m of chat.slice(0, upto).slice(-MAX_HISTORY)) {
@@ -259,10 +259,10 @@ function buildHistory(upto) {
 async function send(raw) {
   const text = String(raw || '').trim();
   if (!text || busy) return;
-  if (!settings.apiKey) { showSettings(true); toast('Előbb add meg a Gemini API-kulcsot.'); return; }
+  if (!settings.apiKey) { showSettings(true); toast('Add your Gemini API key first.'); return; }
   const tier = pickTier(text);
   const model = modelFor(tier);
-  if (!model) { showSettings(true); toast('Töltsd be a modelleket a beállításokban.'); return; }
+  if (!model) { showSettings(true); toast('Load the models in Settings.'); return; }
 
   const c = ctx;
   setCtx(null);
@@ -285,7 +285,7 @@ async function send(raw) {
       onDelta: (t) => { reply.text = t; scheduleRender(); },
     });
   };
-  // Túlterhelésnél (503/500) egyszer újrapróbálja ugyanazt a modellt.
+  // On overload (503/500), retry the same model once.
   const run = async (m) => {
     try {
       return await once(m);
@@ -305,12 +305,12 @@ async function send(raw) {
       const canFallBack = tier === 'strong' && fallback && fallback !== model && !reply.text
         && e.name !== 'AbortError' && [403, 404, 429, 500, 503, 504].includes(e.status);
       if (!canFallBack) throw e;
-      reply.note = 'Az erős modell most nem érhető el, a gyors modell válaszolt.';
+      reply.note = 'The strong model is unavailable right now; the fast model replied.';
       reply.tier = 'fast';
       await run(fallback);
     }
   } catch (e) {
-    if (e.name === 'AbortError') reply.note = 'Megszakítva.';
+    if (e.name === 'AbortError') reply.note = 'Stopped.';
     else reply.error = explain(e);
   } finally {
     reply.pending = false;
@@ -323,13 +323,13 @@ async function send(raw) {
 
 function explain(e) {
   const msg = String((e && e.message) || e);
-  if (e instanceof TypeError) return 'Nincs kapcsolat a Gemini API-val.';
-  if (/api key/i.test(msg) && (e.status === 400 || e.status === 403)) return 'Érvénytelen API-kulcs.';
-  if (e.status === 429) return 'Elérted a percenkénti vagy napi keretet. Várj egy kicsit, vagy válts a Gyors módra.';
-  if (e.status === 403) return 'A kulcs nem fér hozzá ehhez a modellhez.';
-  if (e.status === 404) return 'A modell nem található. Töltsd be újra a modelleket a beállításokban.';
-  if (e.status === 503 || e.status === 500) return 'A modell most túlterhelt. Próbáld újra kicsit később, vagy válts a Gyors módra.';
-  if (e.status === 504) return msg + ' Próbáld újra, vagy válts a Gyors módra.';
+  if (e instanceof TypeError) return 'No connection to the Gemini API.';
+  if (/api key/i.test(msg) && (e.status === 400 || e.status === 403)) return 'Invalid API key.';
+  if (e.status === 429) return 'You hit the per-minute or daily limit. Wait a little, or switch to Fast mode.';
+  if (e.status === 403) return 'This key has no access to this model.';
+  if (e.status === 404) return 'Model not found. Reload the models in Settings.';
+  if (e.status === 503 || e.status === 500) return 'The model is overloaded. Try again a little later, or switch to Fast mode.';
+  if (e.status === 504) return msg + ' Try again, or switch to Fast mode.';
   return msg;
 }
 
@@ -346,7 +346,7 @@ function save() {
   store.set({ chat: chat.slice(-MAX_SAVED).map(({ pending, ...m }) => m) });
 }
 
-/* ---------- Megjelenítés ---------- */
+/* ---------- Rendering ---------- */
 
 const ICON_DOC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/></svg>';
 const ICON_COPY = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
@@ -355,11 +355,11 @@ const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 function messageHtml(m, i) {
   if (m.role === 'user') {
     const tag = m.ctx
-      ? `<div class="tag">${ICON_DOC}<span>${m.ctx.kind === 'selection' ? 'Kijelölés' : 'Oldal'}: ${escHtml(m.ctx.title || m.ctx.url || '')}</span></div>`
+      ? `<div class="tag">${ICON_DOC}<span>${m.ctx.kind === 'selection' ? 'Selection' : 'Page'}: ${escHtml(m.ctx.title || m.ctx.url || '')}</span></div>`
       : '';
     return `<div class="msg user"><div class="bubble">${escHtml(m.text)}</div>${tag}</div>`;
   }
-  const tierName = m.tier === 'strong' ? 'Erős' : 'Gyors';
+  const tierName = m.tier === 'strong' ? 'Strong' : 'Fast';
   const meta = `<div class="meta"><span class="tier ${m.tier}">${tierName}</span><span>${escHtml(m.model || '')}</span></div>`;
   const body = m.text
     ? `<div class="md">${renderMarkdown(m.text)}</div>`
@@ -367,7 +367,7 @@ function messageHtml(m, i) {
   const note = m.note ? `<div class="note">${escHtml(m.note)}</div>` : '';
   const err = m.error ? `<div class="error">${escHtml(m.error)}</div>` : '';
   const actions = !m.pending && m.text
-    ? `<div class="actions"><button class="icon" data-copy="${i}" title="Válasz másolása" aria-label="Válasz másolása">${ICON_COPY}</button></div>`
+    ? `<div class="actions"><button class="icon" data-copy="${i}" title="Copy reply" aria-label="Copy reply">${ICON_COPY}</button></div>`
     : '';
   return `<div class="msg model">${meta}${body}${note}${err}${actions}</div>`;
 }
@@ -378,7 +378,7 @@ function decorate(root) {
     const b = document.createElement('button');
     b.className = 'copy-code';
     b.dataset.copy = 'code';
-    b.textContent = 'Másolás';
+    b.textContent = 'Copy';
     pre.append(b);
   }
 }

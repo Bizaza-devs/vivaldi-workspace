@@ -1,6 +1,6 @@
 import { extractPage } from './extract.js';
 
-// Megnyitás módja: 'window' (külön kis ablak, Vivaldi-ban ez biztos) vagy 'sidepanel'.
+// Open mode: 'window' (small separate window, reliable in Vivaldi) or 'sidepanel'.
 let openMode = 'window';
 
 function applyBehavior() {
@@ -21,18 +21,18 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({ id: 'gp-selection', title: 'Kérdezd a Geminit a kijelölésről', contexts: ['selection'] });
-    chrome.contextMenus.create({ id: 'gp-summary', title: 'Oldal összefoglalása (Gemini)', contexts: ['page'] });
+    chrome.contextMenus.create({ id: 'gp-selection', title: 'Ask Gemini about the selection', contexts: ['selection'] });
+    chrome.contextMenus.create({ id: 'gp-summary', title: 'Summarise page (Gemini)', contexts: ['page'] });
   });
 });
 
 async function openPanel(tab) {
   if (openMode === 'sidepanel' && chrome.sidePanel && chrome.sidePanel.open && tab) {
-    try { await chrome.sidePanel.open({ windowId: tab.windowId }); return; } catch { /* ablakra vált */ }
+    try { await chrome.sidePanel.open({ windowId: tab.windowId }); return; } catch { /* fall back to a window */ }
   }
   const { panelWindowId } = await chrome.storage.session.get('panelWindowId');
   if (panelWindowId) {
-    try { await chrome.windows.update(panelWindowId, { focused: true }); return; } catch { /* bezárták */ }
+    try { await chrome.windows.update(panelWindowId, { focused: true }); return; } catch { /* it was closed */ }
   }
   const opts = { url: chrome.runtime.getURL('panel.html'), type: 'popup', width: 420, height: 720 };
   if (tab) {
@@ -40,7 +40,7 @@ async function openPanel(tab) {
       const w = await chrome.windows.get(tab.windowId);
       opts.left = Math.max(0, w.left + w.width - 440);
       opts.top = w.top + 90;
-    } catch { /* alapértelmezett hely */ }
+    } catch { /* default position */ }
   }
   const win = await chrome.windows.create(opts);
   await chrome.storage.session.set({ panelWindowId: win.id });
@@ -51,11 +51,11 @@ chrome.windows.onRemoved.addListener(async (id) => {
   if (id === panelWindowId) chrome.storage.session.remove('panelWindowId');
 });
 
-// Ikon vagy Alt+G (oldalpanel módban ezt a böngésző maga nyitja, ide nem jut el).
+// Icon or Alt+G (in side panel mode the browser opens it itself and this is not reached).
 chrome.action.onClicked.addListener((tab) => { openPanel(tab); });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  // Az oldalpanelt a kattintással egy ütemben kell nyitni, különben a böngésző tiltja.
+  // The side panel must open in the same tick as the click, otherwise the browser blocks it.
   if (openMode === 'sidepanel' && chrome.sidePanel && chrome.sidePanel.open && tab) {
     chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {});
   }
@@ -74,9 +74,9 @@ async function handleMenu(info, tab) {
   } else if (info.menuItemId === 'gp-summary') {
     try {
       const [r] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractPage });
-      pending = { kind: 'page', ...r.result, prompt: 'Foglald össze ezt az oldalt röviden, pontokba szedve.' };
+      pending = { kind: 'page', ...r.result, prompt: 'Summarise this page briefly as bullet points.' };
     } catch {
-      pending = { kind: 'error', text: 'Ezt az oldalt a böngésző nem engedi beolvasni.' };
+      pending = { kind: 'error', text: 'The browser does not allow reading this page.' };
     }
   } else {
     return;

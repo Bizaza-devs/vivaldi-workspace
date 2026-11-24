@@ -1,5 +1,5 @@
-// Tároló: bővítményként chrome.storage.local (csak ezen a gépen, nincs szinkron),
-// sima weboldalként (előnézet) localStorage.
+// Storage: chrome.storage.local as an extension (this computer only, no sync),
+// localStorage as a plain web page (preview).
 const area = typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local;
 
 export async function get(keys) {
@@ -9,7 +9,7 @@ export async function get(keys) {
     try {
       const v = localStorage.getItem('gp:' + k);
       if (v !== null) out[k] = JSON.parse(v);
-    } catch { /* üres tár */ }
+    } catch { /* empty storage */ }
   }
   return out;
 }
@@ -17,14 +17,14 @@ export async function get(keys) {
 export async function set(obj) {
   if (area) return area.set(obj);
   for (const [k, v] of Object.entries(obj)) {
-    try { localStorage.setItem('gp:' + k, JSON.stringify(v)); } catch { /* tele vagy tiltva */ }
+    try { localStorage.setItem('gp:' + k, JSON.stringify(v)); } catch { /* full or blocked */ }
   }
 }
 
 export async function remove(keys) {
   if (area) return area.remove(keys);
   for (const k of keys) {
-    try { localStorage.removeItem('gp:' + k); } catch { /* tiltva */ }
+    try { localStorage.removeItem('gp:' + k); } catch { /* blocked */ }
   }
 }
 

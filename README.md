@@ -1,65 +1,66 @@
 # vivaldi-workspace
 
-Saját, letisztult böngészőkörnyezet Vivaldi alapon: Brave-szerű privacy-beállítások, macOS-stílusú felület és egy saját Gemini-panel.
+A clean, personal browser setup built on Vivaldi: Brave-style privacy settings, a macOS-style interface and a custom Gemini side panel.
 
-## Tartalom
+## Contents
 
-| Mappa | Mi ez |
+| Folder | What it is |
 |---|---|
-| `extension/` | **Gemini Panel** – Manifest V3 bővítmény (Vivaldi, Edge, Brave, Chrome) |
-| `vivaldi-mods/` | `macos.css` – a Vivaldi felületét módosító CSS |
+| `extension/` | **Gemini Panel** – a Manifest V3 extension (Vivaldi, Edge, Brave, Chrome) |
+| `setup/` | `apply_vivaldi_settings.py` – writes privacy, theme and panel settings into the Vivaldi profile |
+| `vivaldi-mods/` | `macos.css` – CSS that restyles the Vivaldi interface |
 
 ## Gemini Panel
 
-- Chat a Gemini API-val, streamelt válasszal, Markdown-megjelenítéssel.
-- **Automatikus modellválasztás:** rövid kérdésre a gyors modell (Flash-Lite), munkára, elemzésre, kódra vagy hosszú üzenetre az erős (Flash, fizetős kulccsal Pro). A fejlécben kézzel is váltható (Auto / Gyors / Erős). Ha az erős modell nem elérhető (limit, jogosultság), a gyors válaszol.
-- **Oldal csatolása** (gemkapocs), vagy jobb klikk: *Kérdezd a Geminit a kijelölésről* / *Oldal összefoglalása*.
-- Megnyitás: ikon vagy **Alt+G** – külön kis ablakban (Vivaldi) vagy oldalpanelben (Chrome-szerű böngészők). Vivaldi-webpanelként is betölthető (a cím a beállításokban látszik).
-- A modellek listáját a kulcsból tölti le, így nem kell kézzel modellnevet írni.
+- Chat with the Gemini API, with streamed replies and Markdown rendering.
+- **Automatic model choice:** short questions go to the fast model (Flash-Lite); work, analysis, code or long messages go to the strong model (Flash, or Pro with a paid key). You can switch manually in the header (Auto / Fast / Strong). If the strong model is unavailable (limits, access), the fast model answers.
+- **Attach the page** (paperclip), or right-click: *Ask Gemini about the selection* / *Summarise page*.
+- Open it with the icon or **Alt+G** – as a small separate window (Vivaldi) or a side panel (Chrome-style browsers). It can also be loaded as a Vivaldi web panel (the URL is shown in Settings).
+- The model list is fetched with your key, so you never type model names by hand.
 
-### Telepítés
+### Install
 
-1. `vivaldi://extensions` → **Fejlesztői mód** be → **Kicsomagolt bővítmény betöltése** → az `extension` mappa.
-2. A panelen: Beállítások → API-kulcs (<https://aistudio.google.com/apikey>) → **Kulcs ellenőrzése és modellek betöltése**.
+1. `vivaldi://extensions` → turn on **Developer mode** → **Load unpacked** → select the `extension` folder.
+2. In the panel: Settings → API key (<https://aistudio.google.com/apikey>) → **Check key and load models**.
 
-### Adatkezelés
+### Data handling
 
-- Az API-kulcs és a beszélgetés csak a böngésző helyi tárában van (`chrome.storage.local`), szinkron nincs.
-- Az oldal tartalmát csak gombnyomásra vagy jobb klikkre olvassa be; az összes oldal olvasásához egyszer engedélyt kér.
-- Hálózati kapcsolat csak a `generativelanguage.googleapis.com` felé megy.
-- **Ingyenes kulcsnál a Google felhasználhatja a beküldött tartalmat** a termékei fejlesztésére; fizetős szinten nem. Érzékeny oldalt ingyenes kulccsal ne küldj el.
+- The API key and the chat stay in the browser's local storage (`chrome.storage.local`); nothing is synced.
+- Page content is read only when you press the button or use the right-click menu; reading all sites needs a one-time permission.
+- Network traffic goes only to `generativelanguage.googleapis.com`.
+- **With a free key, Google may use the content you send** to improve its products; on the paid tier it does not. Do not send sensitive pages with a free key.
 
-### Fájlok
+### Files
 
-| Fájl | Szerep |
+| File | Role |
 |---|---|
-| `manifest.json` | jogosultságok, Alt+G, oldalpanel |
-| `background.js` | ikon, jobb klikkes menü, ablak / oldalpanel nyitása |
-| `panel.html` / `panel.css` / `panel.js` | a chat felülete és logikája |
-| `gemini.js` | Gemini API: modellek listája, javasolt modellpár, streamelt válasz |
-| `md.js` | kicsi, biztonságos Markdown-megjelenítő (előbb escape-el) |
-| `extract.js` | az oldal szövegének kinyerése |
-| `store.js` | tároló (`chrome.storage.local`, előnézetben `localStorage`) |
+| `manifest.json` | permissions, Alt+G, side panel |
+| `background.js` | icon, context menu, opening the window / side panel |
+| `panel.html` / `panel.css` / `panel.js` | chat UI and logic |
+| `gemini.js` | Gemini API: model list, suggested model pair, streamed replies |
+| `md.js` | small, safe Markdown renderer (escapes first) |
+| `extract.js` | extracts the page text |
+| `store.js` | storage (`chrome.storage.local`, `localStorage` in preview) |
 
-Előnézet bővítmény nélkül (csak a kinézet, API-hívás nélkül):
+Preview without installing the extension (layout only, no API calls):
 
 ```powershell
 python -m http.server 5174 --directory extension
 ```
 
-## Vivaldi-beállítások fájlból
+## Vivaldi settings from a file
 
-`setup/apply_vivaldi_settings.py` – a Vivaldi saját `prefs_definitions.json`-ja alapján írja a profilt (csak bezárt Vivaldinál fut, előtte mentést készít):
-harmadik féltől származó sütik tiltása, csak HTTPS, WebRTC IP-védelem, keresési javaslatok és előtöltés ki, Quad9 DoH, blokkolás a legerősebb szinten,
-két macOS-téma (a Windows világos/sötét módját követi), CSS-mod mappa, webpanelek. A Chromium védett kulcsaihoz (bővítmények, kereső, kezdőlap) nem nyúl.
+`setup/apply_vivaldi_settings.py` writes the profile based on Vivaldi's own `prefs_definitions.json` (it runs only while Vivaldi is closed and makes a backup first):
+blocks third-party cookies, HTTPS-only, WebRTC IP protection, search suggestions and preloading off, Quad9 DNS-over-HTTPS, blocking at the strongest level,
+two macOS themes (following Windows light/dark mode), the CSS mod folder and web panels. It does not touch Chromium's protected keys (extensions, search engine, start page).
 
 ```powershell
 python setup/apply_vivaldi_settings.py
 ```
 
-A Gemini Panel webpanelként nem marad meg a Vivaldi 8.3-ban; Alt+G-vel vagy az ikonjával nyílik.
+In Vivaldi 8.3 the Gemini Panel does not persist as a web panel; open it with Alt+G or its icon.
 
 ## Vivaldi CSS
 
-`vivaldi://experiments` → *Allow for using CSS modifications* → Beállítások → Megjelenés → *Custom UI Modifications* → a `vivaldi-mods` mappa → Vivaldi újraindítása.
-A Vivaldi belső osztálynevei változhatnak; ami nem talál, az egyszerűen nem hat.
+`vivaldi://experiments` → *Allow for using CSS modifications* → Settings → Appearance → *Custom UI Modifications* → the `vivaldi-mods` folder → restart Vivaldi.
+Vivaldi's internal class names can change; a rule that no longer matches simply has no effect.

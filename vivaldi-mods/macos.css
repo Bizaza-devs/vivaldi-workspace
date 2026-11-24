@@ -1,22 +1,22 @@
 /*
-  macOS-szerű, letisztult Vivaldi-felület.
-  Bekapcsolás: vivaldi://experiments → „Allow for using CSS modifications”,
-  majd Beállítások → Megjelenés → Custom UI Modifications → ezt a mappát válaszd ki, és indítsd újra a Vivaldit.
+  Clean, macOS-style Vivaldi UI.
+  Enable: vivaldi://experiments → "Allow for using CSS modifications",
+  then Settings → Appearance → Custom UI Modifications → choose this folder, and restart Vivaldi.
 
-  Ellenőrizve: Vivaldi 8.3.4191.47 (resources/vivaldi/style/common.css).
-  A 8.3 alapból „unified-ui” módban fut: a weboldal már maga is lekerekített kártya,
-  a lekerekítés mértéke a téma `--radius` változója (Beállítások → Témák → Szerkesztő).
-  Újabb verzióban egy szelektor eltűnhet; ilyenkor az a blokk csak nem hat, kárt nem okoz.
-  Minden blokk külön kikapcsolható (töröld vagy tedd megjegyzésbe).
+  Tested with: Vivaldi 8.3.4191.47 (resources/vivaldi/style/common.css).
+  8.3 runs in "unified-ui" mode by default: the web page is already a rounded card,
+  and the corner size is the theme's `--radius` variable (Settings → Themes → Editor).
+  A selector may disappear in a newer version; that block then simply has no effect and does no harm.
+  Each block can be turned off on its own (delete it or comment it out).
 */
 
-/* 1. Rendszerbetű, ahogy macOS-en (Windowson a Segoe UI Variable a legközelebbi) */
+/* 1. System font, as on macOS (Segoe UI Variable is the closest on Windows) */
 #browser {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif !important;
 }
 
-/* 2. Lebegő, lekerekített weboldal-kártya finom árnyékkal.
-   A kártya a #webpage-stack; unified-ui-ban a Vivaldi már ad neki margót és sarokmaszkot. */
+/* 2. Floating, rounded web page card with a soft shadow.
+   The card is #webpage-stack; in unified-ui Vivaldi already gives it a margin and a corner mask. */
 #browser:not(.unified-ui) #webpage-stack {
   margin: 0 8px 8px 0;
 }
@@ -30,7 +30,7 @@
   overflow: hidden;
 }
 
-/* 3. Kapszula alakú címsor, nyugodt kinézet; fókuszban kék gyűrű a Vivaldi körvonala helyett */
+/* 3. Pill-shaped address bar with a calm look; a blue focus ring instead of Vivaldi's outline */
 .UrlBar-AddressField {
   border-radius: 999px !important;
   border-color: transparent !important;
@@ -42,7 +42,7 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--colorHighlightBg, #0a84ff) 35%, transparent) !important;
 }
 
-/* 4. Lekerekített fülek, az aktív fül „kártyaként” emelkedik ki */
+/* 4. Rounded tabs; the active tab stands out as a "card" */
 .tab-position .tab {
   border-radius: 8px !important;
 }
@@ -50,8 +50,8 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
 }
 
-/* 5. Oldalsáv (webpanel-ikonok): több levegő, kerek kijelölés, mint a macOS Dockban.
-   A gombok a #switch > .toolbar.toolbar-vertical .button-toolbar > button elemek (fix 34×34 px). */
+/* 5. Side bar (web panel icons): more breathing room, round highlight, like the macOS Dock.
+   The buttons are #switch > .toolbar.toolbar-vertical .button-toolbar > button (fixed 34×34 px). */
 #switch > .toolbar.toolbar-vertical {
   padding-top: 6px;
   gap: 4px;
@@ -68,7 +68,7 @@
   transform: scale(1.08);
 }
 
-/* 6. A panel (pl. Gemini) is lekerekített kártya; unified-ui-ban a margót a Vivaldi adja */
+/* 6. The panel (e.g. Gemini) is a rounded card too; in unified-ui Vivaldi provides the margin */
 #panels-container .panel-group {
   border-radius: 10px !important;
   overflow: hidden;
@@ -77,8 +77,8 @@
   margin: 0 0 8px 8px;
 }
 
-/* 7. Csendesebb kezelőelemek: elválasztók nélkül.
-   A címsor vonala a .mainbar szegélye, a fülsávé egy belső box-shadow a #tabs-tabbar-containeren. */
+/* 7. Quieter controls: no separators.
+   The address bar line is the .mainbar border; the tab bar line is an inset box-shadow on #tabs-tabbar-container. */
 .mainbar {
   border-width: 0 !important;
 }
