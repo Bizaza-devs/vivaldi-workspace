@@ -12,6 +12,12 @@ A clean, personal browser setup built on Vivaldi: Brave-style privacy settings, 
 
 ## Gemini Panel
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/gemini-panel-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/images/gemini-panel-light.png">
+  <img alt="Gemini Panel: chat view and settings" src="docs/images/gemini-panel-dark.png" width="720">
+</picture>
+
 - Chat with the Gemini API, with streamed replies and Markdown rendering.
 - **Automatic model choice:** short questions go to the fast model (Flash-Lite); work, analysis, code or long messages go to the strong model (Flash, or Pro with a paid key). You can switch manually in the header (Auto / Fast / Strong). If the strong model is unavailable (limits, access), the fast model answers.
 - **Attach the page** (paperclip), or right-click: *Ask Gemini about the selection* / *Summarise page*.
